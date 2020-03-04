@@ -1,0 +1,18 @@
+
+type Query {
+    order: Order
+}
+
+type Order {
+    items: [OrderItem]
+}
+
+type OrderItem {
+    productId: String
+    product: Product
+}
+
+type Product {
+    productId: String
+    title: String
+}

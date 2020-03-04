@@ -1,0 +1,12 @@
+spring:
+  application.name: GraphQL
+
+logging.level:
+  org.springframework: info
+
+graphql:
+  servlet:
+    mapping: /graphql
+
+graphiql:
+  mapping: /graphiql
