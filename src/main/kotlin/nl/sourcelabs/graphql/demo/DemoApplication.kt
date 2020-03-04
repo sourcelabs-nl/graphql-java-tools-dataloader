@@ -43,8 +43,8 @@ fun main(args: Array<String>) {
                     bean { Query() }
                     bean { OrderItemResolver() }
                     bean {
-                        // Create a DataLoaderRegistry and register the DataLoader for the productBatchLoader.
-                        DataLoaderRegistry().register(Product::class.simpleName, DataLoader.newDataLoader(ProductBatchLoader()))
+                        // Create a DataLoaderRegistry and register the ProductBatchLoader.
+                        DataLoaderRegistry().register(ProductBatchLoader())
                     }
                     bean {
                         // Create the GraphQLSchema
@@ -147,8 +147,15 @@ class ConfigurableGraphQLServlet(private val configuration: GraphQLConfiguration
 }
 
 /**
+ * Kotlin extensions which allows for easy registration of BatchLoaders.
+ */
+private inline fun <reified T> DataLoaderRegistry.register(batchLoader: BatchLoader<*, T>): DataLoaderRegistry {
+    return DataLoaderRegistry().register(T::class.simpleName, DataLoader.newDataLoader(batchLoader))
+}
+
+/**
  * Kotlin extensions for fetching a DataLoader from the DataFetchingEnvironment in a standard way.
  */
-private inline fun <reified T> DataFetchingEnvironment.getDataLoader(): DataLoader<String, T> {
-    return dataLoaderRegistry.getDataLoader<String, T>(T::class.simpleName)
+private inline fun <reified T> DataFetchingEnvironment.getDataLoader(): DataLoader<Any, T> {
+    return dataLoaderRegistry.getDataLoader<Any, T>(T::class.simpleName)
 }
