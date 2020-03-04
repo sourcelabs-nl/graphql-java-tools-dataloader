@@ -33,60 +33,74 @@ import javax.websocket.server.HandshakeRequest
 @SpringBootApplication
 class DemoApplication
 
+/**
+ * Main for this Spring Boot application using Kotlin beans DSL.
+ */
 fun main(args: Array<String>) {
     runApplication<DemoApplication>(*args) {
         addInitializers(
                 beans {
-                    bean { graphQLSchema() }
-                    bean { dataLoaderRegistry() }
-                    bean { ServletRegistrationBean(graphQLServlet(ref(), ref()), "/graphql") }
+                    bean { Query() }
+                    bean { OrderItemResolver() }
+                    bean {
+                        // Create a DataLoaderRegistry and register the DataLoader for the productBatchLoader.
+                        DataLoaderRegistry().register(Product::class.simpleName, DataLoader.newDataLoader(ProductBatchLoader()))
+                    }
+                    bean {
+                        // Create the GraphQLSchema
+                        SchemaParser.newParser().file("schema.graphqls").resolvers(ref<Query>(), ref<OrderItemResolver>()).build().makeExecutableSchema()
+                    }
+                    bean {
+                        // Register the GraphQLServlet
+                        ServletRegistrationBean(ConfigurableGraphQLServlet(graphQLConfiguration(ref(), ref())), "/graphql")
+                    }
                 }
         )
     }
 }
 
 /**
- * Create a DataLoaderRegistry and register the DataLoader for the productBatchLoader.
+ * Helper for the GraphQLConfiguration which registers the DataLoaderRegistry.
+ *
+ * GraphQLConfiguration allows for customizing how the runtime is behaving.
  */
-fun dataLoaderRegistry() = DataLoaderRegistry().apply {
-    register(Product::class.simpleName, DataLoader.newDataLoader(ProductBatchLoader()))
-}
-
-/**
- * GraphQL java tools schema build from file.
- */
-fun graphQLSchema() = SchemaParser.newParser().file("schema.graphqls")
-        .resolvers(Query(), OrderResolver())
+fun graphQLConfiguration(schema: GraphQLSchema, registry: DataLoaderRegistry) = GraphQLConfiguration
+        .with(schema)
+        .with(DataLoaderAwareGraphQLContextBuilder(registry))
         .build()
-        .makeExecutableSchema()
 
 /**
- * GraphQLServlet configured with the GraphQLSchema and DataLoaderRegistry
- */
-fun graphQLServlet(schema: GraphQLSchema, registry: DataLoaderRegistry) =
-        ConfigurableGraphQLServlet(GraphQLConfiguration.with(schema).with(DataLoaderAwareGraphQLContextBuilder(registry)).build())
-
-/**
- * Kotlin data classes needed.
+ * Data class for top level query field.
  */
 data class Order(val items: List<OrderItem>)
+
+/**
+ * Data class for parent->child : order->orderItem relation.
+ */
 data class OrderItem(val productId: String)
+
+/**
+ * Data class for parent->child : orderItem->product relation.
+ */
 data class Product(val productId: String, val title: String)
 
 /**
  * GraphQL java tools Query resolver.
  */
 class Query : GraphQLQueryResolver {
+    /**
+     * Retrieve order data (dummy implementation).
+     */
     fun order(): Order = Order(items = listOf(OrderItem("123"), OrderItem("234")))
 }
 
 /**
  * GraphQL java tools OrderItem field resolver.
  */
-class OrderResolver() : GraphQLResolver<OrderItem> {
+class OrderItemResolver() : GraphQLResolver<OrderItem> {
 
     /**
-     * Delegates to the DataLoader.
+     * Delegates data fetching to the DataLoader for Product.
      */
     fun product(orderItem: OrderItem, env: DataFetchingEnvironment): CompletableFuture<Product> = env.getDataLoader<Product>().load(orderItem.productId)
 }
@@ -97,18 +111,18 @@ class OrderResolver() : GraphQLResolver<OrderItem> {
 class ProductBatchLoader : BatchLoader<String, Product> {
 
     /**
-     * Retrieve products by id in batch
+     * Retrieve products by id in batch (dummy implementation).
      */
     fun getProducts(ids: List<String>) = ids.map { Product(productId = it, title = "title ${it}") }
 
     /**
-     * Implementation of BatchLoader interface
+     * Implementation of BatchLoader interface.
      */
     override fun load(ids: List<String>): CompletionStage<List<Product>> = CompletableFuture.supplyAsync { getProducts(ids) }
 }
 
 /**
- * DataLoaderAwareGraphQLContextBuilder allows for configuring the GraphQLContext with a given DataLoaderRegistry
+ * DataLoaderAwareGraphQLContextBuilder allows for configuring the GraphQLContext with a given DataLoaderRegistry.
  */
 class DataLoaderAwareGraphQLContextBuilder(private val registry: DataLoaderRegistry) : GraphQLContextBuilder, GraphQLServletContextBuilder {
 
