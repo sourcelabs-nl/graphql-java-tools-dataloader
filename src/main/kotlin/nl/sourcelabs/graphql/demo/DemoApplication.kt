@@ -108,7 +108,7 @@ class ProductBatchLoader : BatchLoader<String, Product> {
 }
 
 /**
- * DataLoaderRegistryGraphQLContextBuilder allows for configuring the GraphQLContext with a given DataLoaderRegistry
+ * DataLoaderAwareGraphQLContextBuilder allows for configuring the GraphQLContext with a given DataLoaderRegistry
  */
 class DataLoaderAwareGraphQLContextBuilder(private val registry: DataLoaderRegistry) : GraphQLContextBuilder, GraphQLServletContextBuilder {
 
