@@ -67,15 +67,14 @@ fun graphQLServlet(schema: GraphQLSchema, registry: DataLoaderRegistry) =
         ConfigurableGraphQLServlet(GraphQLConfiguration.with(schema).with(DataLoaderAwareGraphQLContextBuilder(registry)).build())
 
 /**
- * Data classes needed.
+ * Kotlin data classes needed.
  */
 data class Order(val items: List<OrderItem>)
-
 data class OrderItem(val productId: String)
 data class Product(val productId: String, val title: String)
 
 /**
- * GraphQL java tools Query type resolver.
+ * GraphQL java tools Query resolver.
  */
 class Query : GraphQLQueryResolver {
     fun order(): Order = Order(items = listOf(OrderItem("123"), OrderItem("234")))
